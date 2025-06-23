@@ -1,0 +1,53 @@
+#recommendation_clean.py
+import pandas as pd
+from sklearn.feature_extraction.text import CountVectorizer
+from sklearn.metrics.pairwise import cosine_similarity
+from io import StringIO
+
+# ----- CSV DATA (inline) -----
+csv_data = StringIO("""title,genres
+The Matrix,Action|Sci-Fi
+John Wick,Action|Thriller
+The Notebook,Romance|Drama
+Avengers: Endgame,Action|Sci-Fi
+Titanic,Romance|Drama
+Inception,Action|Sci-Fi|Thriller
+The Fault in Our Stars,Romance|Drama
+Gladiator,Action|Drama""")
+df = pd.read_csv(csv_data)
+
+# Preprocess the genres
+df['genres'] = df['genres'].str.replace('|', ' ', regex=False)
+
+# Vectorize genres
+vectorizer = CountVectorizer()
+genre_matrix = vectorizer.fit_transform(df['genres'])
+
+# Calculate similarity
+similarity = cosine_similarity(genre_matrix)
+
+# Recommend movies
+def recommend_movie(title, num_recommendations=5):
+    if title not in df['title'].values:
+        return "❌ Movie not found in dataset."
+    idx = df[df['title'] == title].index[0]
+    similarity_scores = list(enumerate(similarity[idx]))
+    similarity_scores = sorted(similarity_scores, key=lambda x: x[1], reverse=True)[1:num_recommendations+1]
+    recommended_indices = [i[0] for i in similarity_scores]
+    return df['title'].iloc[recommended_indices].tolist()
+
+# Run
+if __name__ == "__main__":
+    print("🎬 Movies in dataset:")
+    print(df['title'].to_string(index=False))
+    movie_input = input("\n👉 Enter a movie title you like: ")
+    recommendations = recommend_movie(movie_input)
+    print("\n🎯 Recommended Movies:")
+    if isinstance(recommendations, list):
+        for rec in recommendations:
+            print("✅", rec)
+    else:
+        print(recommendations)
+#requirements.txt
+pandas
+scikit-learn
